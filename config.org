@@ -1,0 +1,268 @@
+#+title: Emacs do Zero
+#+author: Eduardo Silva
+
+* Preparação
+
+- Instalar o Emacs
+- Criar arquivo =~/.config/emacs/init.el=
+- Criar o arquivo =~/.config/emacs/config.org=
+
+** Conteúdo de =init.el=
+
+#+begin_example
+(org-babel-load-file
+ (expand-file-name "config.org" user-emacs-directory))
+#+end_example
+
+* Configurações gerais
+** Desabilitar tela de inicio (scratch)
+
+#+begin_src emacs-lisp
+  (setq inhibit-startup-message t)
+#+end_src
+
+** Configuração da interface (UI)
+#+begin_src emacs-lisp
+  (menu-bar-mode -1)                      ; no menu bar
+  (tool-bar-mode -1)                      ; no tools bar
+  (scroll-bar-mode -1)                    ; no scroll bars
+  (set-fringe-mode 10)                    ; frame edges set to 10px
+  (column-number-mode 1)                  ; absolute numbering
+  (recentf-mode 1)                        ; remember recent files
+  (save-place-mode 1)                     ; remember cursor position
+  (savehist-mode 1)                       ; enable history saving
+  (delete-selection-mode t)               ; overwrite selected text when typing
+  (global-hl-line-mode 1)                 ; enable current line highlight
+  (global-visual-line-mode t)             ; visual line breaking
+  (global-auto-revert-mode 1)             ; update externaly edited files
+  (global-display-line-numbers-mode 1)    ; always show line numbers
+#+end_src
+
+** Numeração de linhas
+#+begin_src emacs-lisp
+  (global-display-line-numbers-mode 1)
+  (setq display-line-numbers-type 'relative) 
+  (dolist (mode '(org-mode-hook))
+  ;                vterm-mode-hook
+  ;                term-mode-hook
+  ;                shell-mode-hook
+  ;                eshell-mode-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+#+end_src
+** Usar espaços em vez de tabulações
+#+begin_src emacs-lisp
+  (setq-default indent-tabs-mode nil)
+#+end_src
+** Deletar texto selecionado ao digitar
+#+begin_src emacs-lisp
+  (delete-selection-mode t)
+#+end_src
+** Destaque da linha corrente
+#+begin_src emacs-lisp
+  (global-hl-line-mode 1)
+#+end_src
+** Quebra de linha visual
+#+begin_src emacs-lisp
+  (global-visual-line-mode t)
+#+end_src
+** Carregar alterações externas
+#+begin_src emacs-lisp
+  (global-auto-revert-mode t)
+#+end_src
+** Prompt de confirmação
+#+begin_src emacs-lisp
+  (fset 'yes-or-no-p 'y-or-n-p) ;
+#+end_src
+** Habilita o fechamento de pares
+#+begin_src emacs-lisp
+  (electric-pair-mode 1)
+#+end_src
+** Sai do minibuffer com ESC
+#+begin_src emacs-lisp
+  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+#+end_src
+** Atalhos para zoom
+#+begin_src emacs-lisp
+  (global-set-key (kbd "C-=") 'text-scale-increase) 
+  (global-set-key (kbd "C--") 'text-scale-decrease)
+#+end_src
+** Configuração do package
+
+#+begin_src emacs-lisp
+  (require 'package)
+  (setq package-archives '(("melpa" . "https://melpa.org/packages/")
+  			 ("elpa" . "https://elpa.gnu.org/packages/")))
+  (package-initialize)
+  (unless package-archive-contents
+    (package-refresh-contents))
+#+end_src
+
+** Configuração do use-package
+
+#+begin_src emacs-lisp
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package))
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+#+end_src
+
+* Sistema
+** Backup
+#+begin_src emacs-lisp
+  (setq backup-directory-alist '((".*" . "~/.local/share/Trash/files")))
+#+end_src
+** Custom Settings
+#+begin_src emacs-lisp
+  (setq custom-file (locate-user-emacs-file "custom.el"))
+  (load custom-file 'noerror 'nomessage)
+#+end_src
+** Fontes
+#+begin_src emacs-lisp
+  ;(set-face-attribute 'default nil :font "JetBrainsMonoNL NF Thin 13")
+  ;(set-face-attribute 'variable-pitch nil :font "JetBrainsMonoNL NF Thin 13")
+  ;(set-face-attribute 'fixed-pitch nil :font "JetBrainsMonoNL NF Thin 13")
+#+end_src
+* Gerencimando de Pacotes
+** Evil Mode
+#+begin_src emacs-lisp
+  (use-package evil
+    :init
+    (setq evil-want-integration t
+          evil-want-keybinding nil
+          evil-vsplit-window-right t
+          evil-split-window-below t
+          evil-undo-system 'undo-redo)
+    (evil-mode))
+
+(use-package evil-collection
+  :after evil
+  :config
+  (add-to-list 'evil-collection-mode-list 'help) ;; evilify help mode
+  (evil-collection-init))
+#+end_src
+
+** Rainbow Mode
+#+begin_src emacs-lisp
+  (use-package rainbow-mode
+  :diminish
+  :hook org-mode prog-mode)
+#+end_src
+
+** Vertico
+#+begin_src emacs-lisp
+  (use-package vertico
+    :bind (:map vertico-map
+                ("C-j" . vertico-next)
+                ("C-k" . vertico-previous)
+                ("C-f" . vertico-exit)
+                :map minibuffer-local-map
+                ("M-h" . backward-kill-word))
+    :custom
+    (vertico-cycle t)
+    :init
+    (vertico-mode))
+#+end_src
+
+** Marginalia
+#+begin_src emacs-lisp
+  (use-package marginalia
+    :init (marginalia-mode))
+#+end_src
+
+** Orderless
+#+begin_src emacs-lisp
+  (use-package orderless
+    :config
+    (setq completion-styles '(orderless basic)))
+#+end_src
+
+** Consult
+#+begin_src emacs-lisp
+  (use-package consult
+    :bind (("C-s" . 'consult-line)
+           ("C-x b" . 'consult-buffer)))
+           ;("C-z /" . 'consult-outline) desativado pois não ah prefix C-z
+           ;("C-z f g" . 'consult-grep)))
+#+end_src
+
+** Which Key
+#+begin_src emacs-lisp
+  (use-package which-key
+    :init (which-key-mode)
+    :diminish which-key-mode
+    :config
+    (setq which-key-idle-delay 0)
+    (setq which-key-show-early-onC-h t))
+#+end_src
+
+** Modus Themes
+#+begin_src emacs-lisp
+  (use-package modus-themes)
+  (setq modus-themes-mode-line '(accented borderless)
+        modus-themes-region '(bg-only)
+        modus-themes-paren-match '(bold intense underline)
+        modus-themes-headings '((t . (rainbow bold)))
+        modus-themes-org-blocks 'gray-background)
+#+end_src
+** Doom Themes
+#+begin_src emacs-lisp
+  (use-package doom-themes
+    :config (setq doom-themes-enable-bold t
+                  doom-themes-enable-italic t)
+    (doom-themes-visual-bell-config)
+    (doom-themes-org-config)
+    (load-theme 'doom-palenight t))
+#+end_src
+** Doom modeline
+#+begin_src emacs-lisp
+  (use-package doom-modeline
+    :ensure t
+    :hook
+    (after-init . doom-modeline-mode)
+    :custom
+    (doom-modeline-height 30)
+    (set-face-attribute 'mode-line nil :font "Inconsolata" :height 100)
+    (set-face-attribute 'mode-line-inactive nil :font "Inconsolata" :height 100)
+    :config
+    (setq doom-modeline-enable-word-count t))
+#+end_src
+** Diminish
+#+begin_src emacs-lisp
+  (use-package diminish)
+  (diminish 'visual-line-mode "")
+  (diminish 'eldoc-mode "")
+  (diminish 'flyspell-mode "Spell")
+#+end_src
+** Company
+#+begin_src emacs-lisp
+  (use-package company
+    :diminish company-mode
+    :custom
+    (company-begin-commands '(self-insert-command))
+    (company-idle-delay .1)
+    (company-minimum-prefix-length 2)
+    (company-show-numbers t)
+    (company-tooltip-align-annotations t)
+    :hook (after-init . global-company-mode))
+#+end_src
+** General
+#+begin_src emacs-lisp
+#+end_src
+** Org Mode
+#+begin_src emacs-lisp
+  (require 'org-tempo)
+#+end_src
+** Rainbow Delimiters
+#+begin_src emacs-lisp
+  (use-package rainbow-delimiters)
+  (add-hook 'prog-mode-hook 'rainbow-delimiters-mode)
+  (add-hook 'text-mode-hook 'rainbow-delimiters-mode)
+#+end_src
+** Rainbow Mode
+#+begin_src emacs-lisp
+#+end_src
+
+** Magit
+#+begin_src emacs-lisp
+  (use-package magit)
+#+end_src
