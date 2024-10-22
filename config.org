@@ -147,6 +147,44 @@
     (load-file "~/.config/emacs/init.el"))
 #+end_src
 * Gerencimando de Pacotes
+** straight
+#+begin_src emacs-lisp
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name
+        "straight/repos/straight.el/bootstrap.el"
+        (or (bound-and-true-p straight-base-dir)
+            user-emacs-directory)))
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+
+#+end_src
+** eglot
+#+begin_src emacs-lisp
+(use-package eglot
+  :hook   ((( clojure-mode clojurec-mode clojurescript-mode
+              java-mode scala-mode c-mode c++-mode)
+            . eglot-ensure)
+           ((cider-mode eglot-managed-mode) . eglot-disable-in-cider))
+  :custom
+  (eglot-autoshutdown t)
+  (eglot-events-buffer-size 0))
+#+end_src
+** eglot-booter
+#+begin_src emacs-lisp
+(use-package eglot-booster
+  :straight
+  (eglot-booster :type git :host github :repo "jdtsmith/eglot-booster")
+  :after eglot
+  :config (eglot-booster-mode))
+#+end_src
 ** Evil Mode
 #+begin_src emacs-lisp
   (use-package evil
@@ -259,15 +297,65 @@
 #+end_src
 ** Company
 #+begin_src emacs-lisp
-  (use-package company
-    :diminish company-mode
-    :custom
-    (company-begin-commands '(self-insert-command))
-    (company-idle-delay .1)
-    (company-minimum-prefix-length 2)
-    (company-show-numbers t)
-    (company-tooltip-align-annotations t)
-    :hook (after-init . global-company-mode))
+  ;(use-package company
+  ;  :diminish company-mode
+  ;  :custom
+  ;  (company-begin-commands '(self-insert-command))
+  ;  (company-idle-delay .1)
+  ;  (company-minimum-prefix-length 2)
+  ;  (company-show-numbers t)
+  ;  (company-tooltip-align-annotations t)
+  ;  :hook (after-init . global-company-mode))
+#+end_src
+testando fussy + company
+#+begin_src emacs-lisp
+(use-package fussy
+  :straight
+  (fussy :type git :host github :repo "jojojames/fussy")
+  :config
+  (setq fussy-filter-fn 'fussy-filter-default)
+  (setq fussy-use-cache t)
+  (setq fussy-compare-same-score-fn 'fussy-histlen->strlen<)
+
+  (push 'fussy completion-styles)
+  (setq
+   ;; For example, project-find-file uses 'project-files which uses
+   ;; substring completion by default. Set to nil to make sure it's using
+   ;; flx.
+   completion-category-defaults nil
+   completion-category-overrides nil)
+
+  ;; `eglot' defaults to flex, so set an override to point to flx instead.
+  (with-eval-after-load 'eglot
+    (add-to-list 'completion-category-overrides
+                 '(eglot (styles fussy basic)))))
+
+(use-package company
+  :config
+  (defun j-company-capf (f &rest args)
+    "Manage `completion-styles'."
+    (if (length= company-prefix 0)
+        ;; Don't use `company' for 0 length prefixes.
+        (let ((completion-styles (remq 'fussy completion-styles)))
+          (apply f args))
+      (let ((fussy-max-candidate-limit 5000)
+            (fussy-default-regex-fn 'fussy-pattern-first-letter)
+            (fussy-prefer-prefix nil))
+        (apply f args))))
+
+  (defun j-company-transformers (f &rest args)
+    "Manage `company-transformers'."
+    (if (length= company-prefix 0)
+        ;; Don't use `company' for 0 length prefixes.
+        (apply f args)
+      (let ((company-transformers '(fussy-company-sort-by-completion-score)))
+        (apply f args))))
+
+  (advice-add 'company-auto-begin :before 'fussy-wipe-cache)
+  (advice-add 'company--transform-candidates :around 'j-company-transformers)
+  (advice-add 'company-capf :around 'j-company-capf)
+
+  (global-company-mode))
 #+end_src
 ** General
 #+begin_src emacs-lisp
@@ -446,81 +534,16 @@ Evitar completar ~<>~ em org-mode para não atrapalhar os snippets
          ("\\.markdown\\'" . markdown-mode))
   :init (setq markdown-command "pandoc"))
 #+end_src
-** straight
+*** Dart mode
 #+begin_src emacs-lisp
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name
-        "straight/repos/straight.el/bootstrap.el"
-        (or (bound-and-true-p straight-base-dir)
-            user-emacs-directory)))
-      (bootstrap-version 7))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
-
+(use-package dart-mode)
+(add-hook 'dart-mode-hook 'eglot-ensure)
 #+end_src
-** lspce
-dependencias
+** editorconfig
 #+begin_src emacs-lisp
-(use-package yasnippet)
-(use-package f)
-
+(use-package editorconfig
+  :ensure t
+  :config
+  (editorconfig-mode 1))
 #+end_src
 
-#+begin_src emacs-lisp
-(straight-use-package
- `(lspce :type git :host github :repo "zbelial/lspce"
-         :files (:defaults ,(pcase system-type
-                              ('gnu/linux "lspce-module.so")
-                              ('darwin "lspce-module.dylib")))
-         :pre-build ,(pcase system-type
-                       ('gnu/linux '(("cargo" "build" "--release") ("cp" "./target/release/liblspce_module.so" "./lspce-module.so")))
-                       ('darwin '(("cargo" "build" "--release") ("cp" "./target/release/liblspce_module.dylib" "./lspce-module.dylib"))))))
-
-#+end_src
-Configuração
-#+begin_src emacs-lisp
-(use-package lspce
-  :load-path "/home/edu/.config/emacs/straight/build/lspce"
-  :config (progn
-            (setq lspce-send-changes-idle-time 0.1)
-            (setq lspce-show-log-level-in-modeline t) ;; show log level in mode line
-
-            ;; You should call this first if you want lspce to write logs
-            (lspce-set-log-file "/tmp/lspce.log")
-
-            ;; By default, lspce will not write log out to anywhere. 
-            ;; To enable logging, you can add the following line
-            ;; (lspce-enable-logging)
-            ;; You can enable/disable logging on the fly by calling `lspce-enable-logging' or `lspce-disable-logging'.
-
-            ;; enable lspce in particular buffers
-            ;; (add-hook 'rust-mode-hook 'lspce-mode)
-
-            ;; modify `lspce-server-programs' to add or change a lsp server, see document
-            ;; of `lspce-lsp-type-function' to understand how to get buffer's lsp type.
-            ;; Bellow is what I use
-            (setq lspce-server-programs `(("rust"  "rust-analyzer" "" lspce-ra-initializationOptions)
-                                          ("python" "pylsp" "" )
-                                          ("C" "clangd" "--all-scopes-completion --clang-tidy --enable-config --header-insertion-decorators=0")
-                                          ("java" "java" lspce-jdtls-cmd-args lspce-jdtls-initializationOptions)
-                                          ))
-            )
-  )
-#+end_src
-** eglot-booter
-#+begin_src emacs-lisp
-(straight-use-package '(el-patch :type git :host github :repo "jdtsmith/eglot-booster"))
-
-#+end_src
-#+begin_src emacs-lisp
-;(use-package eglot-booster
-;  :after eglot
-;  :config	(eglot-booster-mode))
-#+end_src
