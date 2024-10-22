@@ -1,0 +1,1 @@
+/home/edu/.config/emacs/straight/repos/eglot-booster/eglot-booster.el

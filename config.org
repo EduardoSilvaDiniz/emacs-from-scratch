@@ -97,13 +97,23 @@
     (package-refresh-contents))
 #+end_src
 
+#+RESULTS:
+
 ** Configuração do use-package
 
 #+begin_src emacs-lisp
-  (unless (package-installed-p 'use-package)
-    (package-install 'use-package))
-  (require 'use-package)
-  (setq use-package-always-ensure t)
+(unless (package-installed-p 'use-package)
+  (package-install 'use-package))
+(require 'use-package)
+(setq use-package-always-ensure t)
+(setq package-enable-at-startup nil)
+#+end_src
+
+** Mudar o shell
+#+begin_src emacs-lisp
+(setq explicit-shell-file-name "/run/current-system/sw/bin/bash")
+(setq shell-file-name "/run/current-system/sw/bin/bash")
+(setq shell-command-switch "-ic")
 #+end_src
 
 * Sistema
@@ -121,6 +131,20 @@
   ;(set-face-attribute 'default nil :font "JetBrainsMonoNL NF Thin 13")
   ;(set-face-attribute 'variable-pitch nil :font "JetBrainsMonoNL NF Thin 13")
   ;(set-face-attribute 'fixed-pitch nil :font "JetBrainsMonoNL NF Thin 13")
+#+end_src
+** Funções
+*** Abrir diretório de configurações pessoais
+#+begin_src emacs-lisp
+  (defun edu/emacs-personal-files ()
+    (interactive)
+    (let ((default-directory "~/.config/emacs/"))
+      (call-interactively 'find-file)))
+#+end_src
+*** Recarga das configurações
+#+begin_src emacs-lisp
+  (defun edu/reload-settings ()
+    (interactive)
+    (load-file "~/.config/emacs/init.el"))
 #+end_src
 * Gerencimando de Pacotes
 ** Evil Mode
@@ -260,12 +284,243 @@
 #+end_src
 ** Rainbow Mode
 #+begin_src emacs-lisp
+  (use-package rainbow-mode
+  :diminish
+  :hook org-mode prog-mode)
 #+end_src
-
-
-
-
 ** Magit
 #+begin_src emacs-lisp
   (use-package magit)
+#+end_src
+** meow
+#+begin_src emacs-lisp
+        (use-package meow)
+      
+        (defun meow-setup ()
+          (setq meow-cheatsheet-layout meow-cheatsheet-layout-qwerty)
+          (meow-motion-overwrite-define-key
+           '("j" . meow-next)
+           '("k" . meow-prev)
+           '("<escape>" . ignore))
+          (meow-leader-define-key
+           ;; SPC j/k will run the original command in MOTION state.
+           '("j" . "H-j")
+           '("k" . "H-k")
+           ;; Use SPC (0-9) for digit arguments.
+           '("1" . meow-digit-argument)
+           '("2" . meow-digit-argument)
+           '("3" . meow-digit-argument)
+           '("4" . meow-digit-argument)
+           '("5" . meow-digit-argument)
+           '("6" . meow-digit-argument)
+           '("7" . meow-digit-argument)
+           '("8" . meow-digit-argument)
+           '("9" . meow-digit-argument)
+           '("0" . meow-digit-argument)
+           '("/" . meow-keypad-describe-key)
+           '("?" . meow-cheatsheet))
+          (meow-normal-define-key
+           '("0" . meow-expand-0)
+           '("9" . meow-expand-9)
+           '("8" . meow-expand-8)
+           '("7" . meow-expand-7)
+           '("6" . meow-expand-6)
+           '("5" . meow-expand-5)
+           '("4" . meow-expand-4)
+           '("3" . meow-expand-3)
+           '("2" . meow-expand-2)
+           '("1" . meow-expand-1)
+           '("-" . negative-argument)
+           '(";" . meow-reverse)
+           '("," . meow-inner-of-thing)
+           '("." . meow-bounds-of-thing)
+           '("[" . meow-beginning-of-thing)
+           '("]" . meow-end-of-thing)
+           '("a" . meow-append)
+           '("A" . meow-open-below)
+           '("b" . meow-back-word)
+           '("B" . meow-back-symbol)
+           '("c" . meow-change)
+           '("d" . meow-delete)
+           '("D" . meow-backward-delete)
+           '("e" . meow-next-word)
+           '("E" . meow-next-symbol)
+           '("f" . meow-find)
+           '("g" . meow-cancel-selection)
+           '("G" . meow-grab)
+           '("h" . meow-left)
+           '("H" . meow-left-expand)
+           '("i" . meow-insert)
+           '("I" . meow-open-above)
+           '("j" . meow-next)
+           '("J" . meow-next-expand)
+           '("k" . meow-prev)
+           '("K" . meow-prev-expand)
+           '("l" . meow-right)
+           '("L" . meow-right-expand)
+           '("m" . meow-join)
+           '("n" . meow-search)
+           '("o" . meow-block)
+           '("O" . meow-to-block)
+           '("p" . meow-yank)
+           '("q" . meow-quit)
+           '("Q" . meow-goto-line)
+           '("r" . meow-replace)
+           '("R" . meow-swap-grab)
+           '("s" . meow-kill)
+           '("t" . meow-till)
+           '("u" . meow-undo)
+           '("U" . meow-undo-in-selection)
+           '("v" . meow-visit)
+           '("w" . meow-mark-word)
+           '("W" . meow-mark-symbol)
+           '("x" . meow-line)
+           '("X" . meow-goto-line)
+           '("y" . meow-save)
+           '("Y" . meow-sync-grab)
+           '("z" . meow-pop-selection)
+           '("'" . repeat)
+           '("<escape>" . ignore)))
+  (require 'meow)
+  (meow-setup)
+    ;(meow-global-mode 1)
+#+end_src
+** Org Mode
+*** Correção para fechamento de pares
+Evitar completar ~<>~ em org-mode para não atrapalhar os snippets
+#+begin_src emacs-lisp
+  (add-hook 'org-mode-hook (lambda ()
+                             (setq-local electric-pair-inhibit-predicate
+                                         `(lambda (c)
+                                            (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+#+end_src
+*** Endentação de blocos
+#+begin_src emacs-lisp
+  (setq org-edit-src-content-indentation 0) ; Zera a margem dos blocos
+  (electric-indent-mode -1)                 ; Desliga a indentação automática
+#+end_src
+*** Templates de blocos
+#+begin_src emacs-lisp
+  (require 'org-tempo)
+#+end_src
+*** Org Bullets
+#+begin_src emacs-lisp
+  (add-hook 'org-mode-hook 'org-indent-mode)
+  (use-package org-bullets
+  :custom
+  (org-bullets-bullet-list '("▶" "▷" "◆" "◇" "▪" "▪" "▪"))) 
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+#+end_src
+** Vterm
+#+begin_src emacs-lisp
+(use-package vterm
+  :config
+  (setq shell-file-name "/bin/bash"
+        vterm-max-scrollback 5000))
+#+end_src
+** Flycheck
+#+begin_src emacs-lisp
+(use-package flycheck
+  :config (setq flycheck-idle-change-delay 0)
+  :hook (prog-mode-hook . flycheck-mode))
+#+end_src
+** Projectile
+#+begin_src emacs-lisp
+(use-package projectile
+  :diminish projectile-mode
+  :config
+  (projectile-mode))
+#+end_src
+** Linguagens
+*** Web mode
+#+begin_src emacs-lisp
+(use-package web-mode
+  :mode ("\\.phtml\\.tpl\\.html\\.twig\\.html?\\'" . web-mode))
+#+end_src
+*** Markdown mode
+#+begin_src emacs-lisp
+(use-package markdown-mode
+  :commands (markdown-mode gfm-mode)
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'" . gfm-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :init (setq markdown-command "pandoc"))
+#+end_src
+** straight
+#+begin_src emacs-lisp
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name
+        "straight/repos/straight.el/bootstrap.el"
+        (or (bound-and-true-p straight-base-dir)
+            user-emacs-directory)))
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+
+#+end_src
+** lspce
+dependencias
+#+begin_src emacs-lisp
+(use-package yasnippet)
+(use-package f)
+
+#+end_src
+
+#+begin_src emacs-lisp
+(straight-use-package
+ `(lspce :type git :host github :repo "zbelial/lspce"
+         :files (:defaults ,(pcase system-type
+                              ('gnu/linux "lspce-module.so")
+                              ('darwin "lspce-module.dylib")))
+         :pre-build ,(pcase system-type
+                       ('gnu/linux '(("cargo" "build" "--release") ("cp" "./target/release/liblspce_module.so" "./lspce-module.so")))
+                       ('darwin '(("cargo" "build" "--release") ("cp" "./target/release/liblspce_module.dylib" "./lspce-module.dylib"))))))
+
+#+end_src
+Configuração
+#+begin_src emacs-lisp
+(use-package lspce
+  :load-path "/home/edu/.config/emacs/straight/build/lspce"
+  :config (progn
+            (setq lspce-send-changes-idle-time 0.1)
+            (setq lspce-show-log-level-in-modeline t) ;; show log level in mode line
+
+            ;; You should call this first if you want lspce to write logs
+            (lspce-set-log-file "/tmp/lspce.log")
+
+            ;; By default, lspce will not write log out to anywhere. 
+            ;; To enable logging, you can add the following line
+            ;; (lspce-enable-logging)
+            ;; You can enable/disable logging on the fly by calling `lspce-enable-logging' or `lspce-disable-logging'.
+
+            ;; enable lspce in particular buffers
+            ;; (add-hook 'rust-mode-hook 'lspce-mode)
+
+            ;; modify `lspce-server-programs' to add or change a lsp server, see document
+            ;; of `lspce-lsp-type-function' to understand how to get buffer's lsp type.
+            ;; Bellow is what I use
+            (setq lspce-server-programs `(("rust"  "rust-analyzer" "" lspce-ra-initializationOptions)
+                                          ("python" "pylsp" "" )
+                                          ("C" "clangd" "--all-scopes-completion --clang-tidy --enable-config --header-insertion-decorators=0")
+                                          ("java" "java" lspce-jdtls-cmd-args lspce-jdtls-initializationOptions)
+                                          ))
+            )
+  )
+#+end_src
+** eglot-booter
+#+begin_src emacs-lisp
+(straight-use-package '(el-patch :type git :host github :repo "jdtsmith/eglot-booster"))
+
+#+end_src
+#+begin_src emacs-lisp
+;(use-package eglot-booster
+;  :after eglot
+;  :config	(eglot-booster-mode))
 #+end_src
