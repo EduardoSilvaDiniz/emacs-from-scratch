@@ -1,1 +1,0 @@
-/home/edu/.config/emacs/straight/repos/lspce/lspce.el

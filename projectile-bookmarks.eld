@@ -1,1 +1,0 @@
-("~/Projetos/c-learn/" "~/.config/emacs/" "~/Projetos/cobblebank-new/app/")
