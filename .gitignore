@@ -22,3 +22,9 @@ straight/
 projectile-bookmarks.eld
 projects
 custom.el
+.#.gitignore
+.cache/
+.lsp-session-v1
+eglot-java-eclipse-jdt-cache/
+projectile.cache
+share/
